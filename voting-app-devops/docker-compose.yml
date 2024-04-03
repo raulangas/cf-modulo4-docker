@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - html:/usr/share/nginx/html
+      - certs:/etc/nginx/certs
+      - vhostd:/etc/nginx/vhost.d
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - confd:/etc/nginx/conf.d
+    networks:
+      - front-tier
+      - back-tier
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+
+#####
+  letsencrypt:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/acme.sh
+    environment:
+      DEFAULT_EMAIL: "mail@yourdomain.tld"
+    networks:
+      - front-tier
+      - back-tier
+
+
+
+  vote:
+    build: ./vote
+    depends_on:
+      - redis
+    volumes:
+      - ./vote:/usr/local/app
+    networks:
+      - front-tier
+      - back-tier
+    environment:
+      - VIRTUAL_HOST=vote.ip_public.sslip.io
+      - LETSENCRYPT_HOST=vote.ip_public.sslip.io
+      - LETSENCRYPT_EMAIL=correo@gmail.com
+
+  result:
+    build: ./result
+    depends_on:
+      - db
+    volumes:
+      - ./result:/usr/local/app
+    networks:
+      - front-tier
+      - back-tier
+    environment:
+      - VIRTUAL_HOST=result.52.42.16.162.sslip.io
+      - LETSENCRYPT_HOST=result.52.42.16.162.sslip.io
+      - LETSENCRYPT_EMAIL=295devops@gmail.com
+
+  worker:
+    build: ./worker
+    depends_on:
+      - redis
+      - db
+    networks:
+      - back-tier
+
+  redis:
+    image: redis:alpine
+    networks:
+      - back-tier
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - "db-data:/var/lib/postgresql/data"
+    networks:
+      - back-tier
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    depends_on:
+      - db
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "295devops@gmail.com"
+      PGADMIN_DEFAULT_PASSWORD: "prueba1234"
+    ports:
+      - "5050:80"
+    networks:
+      - back-tier
+volumes:
+  db-data:
+  html:
+  certs:
+  vhostd:
+  confd:
+
+networks:
+  front-tier:
+  back-tier:
