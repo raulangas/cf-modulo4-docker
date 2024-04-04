@@ -9,7 +9,7 @@ services:
       - mynetwork
 
   webserver:
-    image: nginx:latest
+    image: nginx:alpine
     ports:
       - "8000:80"
     volumes:
