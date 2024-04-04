@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - mynetwork
+
+  webserver:
+    image: nginx:latest
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - mynetwork
+
+  mongodb:
+    image: mongo
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
+
+volumes:
+  mongodata:
